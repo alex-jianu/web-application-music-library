@@ -2,6 +2,12 @@ require "spec_helper"
 require "rack/test"
 require_relative '../../app'
 
+def reset_albums_table
+  seed_sql = File.read('spec/seeds/albums_seeds.sql')
+  connection = PG.connect({ host: '127.0.0.1', dbname: 'music_library_test' })
+  connection.exec(seed_sql)
+end
+
 describe Application do
   # This is so we can use rack-test helper methods.
   include Rack::Test::Methods
@@ -10,6 +16,9 @@ describe Application do
   # class so our tests work.
   let(:app) { Application.new }
 
+  before(:each) do
+    reset_albums_table
+  end
   
 
   context "GET /albums" do
@@ -17,7 +26,7 @@ describe Application do
       response = get('/albums')
 
       expect(response.status).to eq(200)
-      expect(response.body).to eq "Surfer Rosa, Waterloo, Super Trouper, Bossanova, Lover, Folklore, I Put a Spell on You, Baltimore, Here Comes the Sun, Fodder on My Wings, Ring Ring"
+      expect(response.body).to include('<a href="/albums/1">Title: Doolittle Release Year: 1989</a>')
     end
   end
 
@@ -28,7 +37,7 @@ describe Application do
       expect(response.status).to eq(200)
 
       new_list = get('/albums')
-      expect(new_list.body).to eq "Surfer Rosa, Waterloo, Super Trouper, Bossanova, Lover, Folklore, I Put a Spell on You, Baltimore, Here Comes the Sun, Fodder on My Wings, Ring Ring, Voyage"
+      expect(new_list.body).to include('<a href="/albums/13">Title: Voyage Release Year: 2022</a>')
     end
   end
 
@@ -37,9 +46,7 @@ describe Application do
       response = get('/artists')
 
       expect(response.status).to eq(200)
-
-      new_list = get('/artists')
-      expect(new_list.body).to eq "Pixies, ABBA, Taylor Swift, Nina Simone, Kiasmos"
+      expect(response.body).to include('<a href="/artists/1">ID: 1 Name: Pixies Genre: Rock</a>')
     end
   end
 
@@ -50,7 +57,25 @@ describe Application do
       expect(response.status).to eq(200)
 
       new_list = get('/artists')
-      expect(new_list.body).to eq "Pixies, ABBA, Taylor Swift, Nina Simone, Kiasmos, Wild nothing"
+      expect(new_list.body).to include('<a href="/artists/6">ID: 6 Name: Wild nothing Genre: Indie</a>')
+    end
+  end
+
+  context "GET /albums/:id" do
+    it "returns the details of the searched album" do
+      response = get('/albums/1')
+
+      expect(response.status).to eq(200)
+      expect(response.body).to include('<h1>Doolittle</h1>')
+    end
+  end
+
+  context "GET /artists/:id" do
+    it "returns the details of the searched artist" do
+      response = get('/artists/1')
+
+      expect(response.status).to eq(200)
+      expect(response.body).to include('<h1>Pixies</h1>')
     end
   end
 end
